@@ -62,7 +62,7 @@ By now you have a discord server, the DiscordEarsBot is running and is a part of
 - The duration of a single audio input is limited to 20 seconds, longer audio is not transcribed.
 
 ## Language
-WiAI supports over 120 languages (https://wit.ai/faq), however only one language can be used at a time.
+WitAI supports over 120 languages (https://wit.ai/faq), however only one language can be used at a time.
 If you're not speaking English on Discord, then change your default language on your witAI account:
 
 ![Discord Ears Bot Demo](https://i.imgur.com/G19bGYe.png)
