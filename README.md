@@ -29,7 +29,7 @@ Rename the file settings-sample.json to settings.json and enter the obtained API
 }
 ```
 
-##Running
+## Running
 
 Development mode (logging to console):
 ```
@@ -43,8 +43,7 @@ Production mode (logging to screenlog file):
 ./close.sh       # this closes the background screen session.
 ```
 
-##Usage
-Usage
+## Usage
 
 By now you have a discord server, the DiscordEarsBot is running and is a part of your server. Make sure your server has a text and voice channel.
 
@@ -53,3 +52,11 @@ By now you have a discord server, the DiscordEarsBot is running and is a part of
 3. Everything said within that channel will be transcribed into text (as long as the bot is within the voice channel).
 4. Type `*leave` to make the bot leave the voice channel.
 5. Type `*help` for a list of commands.
+
+### notes:
+- When the bot is inside a voice channel it listens to all speech and transcribes audio into text.
+- Each user is a separate audio channel, the bot hears everyone separately.
+- Only when your user picture turns green in the voice channel will the bot receive your audio.
+- A long pause interrupts the audio input.
+- The duration of a single audio input is limited to 20 seconds, longer audio is not transcribed.
+
