@@ -138,10 +138,14 @@ discordClient.on('message', async (msg) => {
         if (!('guild' in msg) || !msg.guild) return; // prevent private messages to bot
         const mapKey = msg.guild.id;
         if (msg.content.trim().toLowerCase() == _CMD_JOIN) {
-            if (!guildMap.has(mapKey))
-                await connect(msg, mapKey)
-            else
-                msg.reply('Already connected')
+            if (!msg.member.voice.channelID) {
+                msg.reply('Error: please join a voice channel first.')
+            } else {
+                if (!guildMap.has(mapKey))
+                    await connect(msg, mapKey)
+                else
+                    msg.reply('Already connected')
+            }
         } else if (msg.content.trim().toLowerCase() == _CMD_LEAVE) {
             if (guildMap.has(mapKey)) {
                 let val = guildMap.get(mapKey);
@@ -175,8 +179,10 @@ discordClient.on('message', async (msg) => {
 
 function getHelpString() {
     let out = '**COMMANDS:**\n'
+        out += '```'
         out += PREFIX + 'join\n';
         out += PREFIX + 'leave\n';
+        out += '```'
     return out;
 }
 
