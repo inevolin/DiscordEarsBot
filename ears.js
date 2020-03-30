@@ -308,7 +308,7 @@ async function transcribe_witai(file) {
             let now = Math.floor(new Date());    
             while (now - witAI_lastcallTS < 1000) {
                 console.log('sleep')
-                await sleep(1000);
+                await sleep(100);
                 now = Math.floor(new Date());
             }
         }
