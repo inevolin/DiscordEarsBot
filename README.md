@@ -11,6 +11,7 @@ You can follow the steps below to get this bot up and running.
 ## Installation
 You need nodeJS version 12+ with npm on your machine.
 ```
+sudo apt-get install -y sox screen
 git clone https://github.com/healzer/DiscordEarsBot.git
 cd DiscordEarsBot
 npm install
