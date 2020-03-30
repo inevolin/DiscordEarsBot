@@ -289,9 +289,7 @@ function speak_impl(voice_Connection, mapKey) {
 
 
 function process_commands_query(txt, mapKey, user) {
-    // console.log(user.name+': '+txt)
     if (txt && txt.length) {
-        console.log(user)
         let val = guildMap.get(mapKey);
         val.text_Channel.send(user.username + ': ' + txt)
     }
