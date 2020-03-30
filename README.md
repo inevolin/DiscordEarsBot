@@ -66,3 +66,13 @@ WiAI supports over 120 languages (https://wit.ai/faq), however only one language
 If you're not speaking English on Discord, then change your default language on your witAI account:
 
 ![Discord Ears Bot Demo](https://i.imgur.com/G19bGYe.png)
+
+## Contact
+
+For questions, feedback or issues feel free to get in touch with me.
+
+Name: Ilya Nevolin
+
+Email: ilja.nevolin@gmail.com
+
+Discord: https://discord.gg/ApdTMG9
