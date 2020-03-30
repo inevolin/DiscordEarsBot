@@ -22,7 +22,7 @@ Create a (free) discord bot and obtain the API credentials. Here's an easy tutor
 
 Create a (free) WitAI account and obtain the API credentials: https://wit.ai/
 
-Rename the file settings-sample.json to settings.json and enter the obtained API credentials:
+Rename the file `settings-sample.json` to `settings.json` and enter the obtained API credentials:
 ```
 {
     "discord_token": "your_token",
