@@ -5,7 +5,7 @@
   "main": "ears.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ears.js"
+    "start": "PATH=$PATH:$PWD/node_modules/sox-static-linux/ node ears.js"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +15,7 @@
     "node-witai-speech": "^1.0.2",
     "request": "^2.88.2",
     "sox-audio": "^0.3.0",
+    "sox-static-linux": "^1.4.0",
     "underscore": "^1.9.2"
   }
 }
