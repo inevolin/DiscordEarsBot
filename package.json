@@ -5,7 +5,7 @@
   "main": "ears.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "PATH=$PATH:$PWD/node_modules/sox-static-linux/ node ears.js"
+    "start": "node ears.js"
   },
   "author": "",
   "license": "ISC",

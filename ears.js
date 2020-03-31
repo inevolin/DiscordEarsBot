@@ -104,19 +104,10 @@ let SPOTIFY_TOKEN_ID = null;
 let SPOTIFY_TOKEN_SECRET = null;
 
 function loadConfig() {
-    if (fs.existsSync(path)) {
-        const CFG_DATA = JSON.parse( fs.readFileSync(SETTINGS_FILE, 'utf8') );
+    const CFG_DATA = JSON.parse( fs.readFileSync(SETTINGS_FILE, 'utf8') );
     
-        DISCORD_TOK = CFG_DATA.discord_token;
-        witAPIKEY = CFG_DATA.wit_ai_token;
-    } else {
-        if (process.env.DISCORD_TOKEN && process.env.WITAI_TOKEN) {
-            DISCORD_TOK = process.env.DISCORD_TOKEN;
-            witAPIKEY = process.env.WITAI_TOKEN;
-        } else {
-            throw new Error('missing api tokens');
-        }
-    }
+    DISCORD_TOK = CFG_DATA.discord_token;
+    witAPIKEY = CFG_DATA.wit_ai_token;
 }
 loadConfig()
 //////////////////////////////////////////
