@@ -6,6 +6,8 @@ Can be useful for hearing impaired and deaf people.
 
 [![Discord Ears Bot Demo](http://img.youtube.com/vi/DoT2rdLymNc/0.jpg)](http://www.youtube.com/watch?v=DoT2rdLymNc "Discord Ears Bot Demo")
 
+Try the bot for yourself on our Discord server: https://discord.gg/ApdTMG9
+
 You can follow the steps below to get this bot up and running.
 
 ## Installation
