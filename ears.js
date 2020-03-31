@@ -186,6 +186,16 @@ function getHelpString() {
     return out;
 }
 
+const { Readable } = require('stream');
+
+const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
+
+class Silence extends Readable {
+  _read() {
+    this.push(SILENCE_FRAME);
+    this.destroy();
+  }
+}
 
 async function connect(msg, mapKey) {
     try {
@@ -194,7 +204,7 @@ async function connect(msg, mapKey) {
         let text_Channel = await discordClient.channels.fetch(msg.channel.id);
         if (!text_Channel) return msg.reply("Error: The text channel does not exist!");
         let voice_Connection = await voice_Channel.join();
-        voice_Connection.play('sound.mp3', { volume: 0.5 });
+        voice_Connection.play(new Silence(), { type: 'opus' });
         guildMap.set(mapKey, {
             'text_Channel': text_Channel,
             'voice_Channel': voice_Channel,
