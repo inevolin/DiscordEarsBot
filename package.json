@@ -7,7 +7,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js"
   },
-  "author": "",
+  "author": "Ilja Nevolin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/healzer/DiscordEarsBot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/healzer/DiscordEarsBot/issues"
+  },
+  "homepage": "https://github.com/healzer/DiscordEarsBot#readme",
   "license": "ISC",
   "dependencies": {
     "@discordjs/opus": "^0.1.0",
