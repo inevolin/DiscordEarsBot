@@ -10,6 +10,14 @@ Try the bot for yourself on our Discord server: https://discord.gg/ApdTMG9
 
 You can follow the steps below to get this bot up and running.
 
+## Docker (optional)
+If you prefer using Docker instead of manually installing it:
+1. Save the `Dockerfile`
+2. Create a file `settings.json` and configure it (see Settings part)
+3. run `docker build -t discordearsbot .`  this may take a minute or two.
+4. run `docker run -it discordearsbot`
+5. skip to Usage part.
+
 ## Installation
 You need nodeJS version 12+ with npm on your machine.
 ```
@@ -36,7 +44,7 @@ Rename the file `settings-sample.json` to `settings.json` and enter the obtained
 
 Development mode (logging to console):
 ```
-node ears.js
+node index.js
 ```
 
 Production mode (logging to screenlog file):
