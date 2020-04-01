@@ -32,9 +32,9 @@ npm install
 ```
 
 ## Settings
-Create a (free) discord bot and obtain the API credentials. Here's an easy tutorial: https://www.writebots.com/discord-bot-token/ Note: Give your bot enough permissions or simply grant it Administrator rights.
+Create a (free) discord bot and obtain the API credentials (Bot Token). Here's an easy tutorial: https://www.writebots.com/discord-bot-token/ Note: Give your bot enough permissions or simply grant it Administrator rights.
 
-Create a (free) WitAI account and obtain the API credentials: https://wit.ai/
+Create a (free) WitAI account and obtain the API credentials (Server Access Token): https://wit.ai/
 
 Rename the file `settings-sample.json` to `settings.json` and enter the obtained API credentials:
 ```
