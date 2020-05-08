@@ -81,6 +81,9 @@ If you're not speaking English on Discord, then change your default language on 
 
 ![Discord Ears Bot Demo](https://i.imgur.com/G19bGYe.png)
 
+## For developers
+Using Mozilla DeepSpeech for speech recognition, [tutorial](https://medium.com/@ilyanevolin/discord-stt-bot-using-mozilla-deepspeech-e77ee28937eb).
+
 ## Contact
 
 For questions, feedback or issues feel free to get in touch with me.
