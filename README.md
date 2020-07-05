@@ -36,6 +36,8 @@ You need nodeJS version 12+ with npm on your machine.
 
 Download and install the latest version of "sox" for Windows: https://sourceforge.net/projects/sox/files/sox/
 
+You may need to manually add sox to your environment variables, here's a tutorial: https://stackoverflow.com/questions/17667491/how-to-use-sox-in-windows
+
 Using shell or command prompt execute the following:
 ```
 git clone https://github.com/healzer/DiscordEarsBot.git
