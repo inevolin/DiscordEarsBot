@@ -22,10 +22,20 @@ If you prefer using Docker instead of manually installing it:
 4. run `docker run -it discordearsbot`
 5. skip to Usage part.
 
-## Installation
+## Linux Installation
 You need nodeJS version 12+ with npm on your machine.
 ```
 sudo apt-get install -y sox screen
+git clone https://github.com/healzer/DiscordEarsBot.git
+cd DiscordEarsBot
+npm install
+```
+
+## Windows Installation
+You need nodeJS version 12+ with npm on your machine.
+Download and install the latest version of "sox" for Windows: https://sourceforge.net/projects/sox/files/sox/
+Using shell or command prompt execute the following:
+```
 git clone https://github.com/healzer/DiscordEarsBot.git
 cd DiscordEarsBot
 npm install
@@ -46,12 +56,12 @@ Rename the file `settings-sample.json` to `settings.json` and enter the obtained
 
 ## Running
 
-Development mode (logging to console):
+Execute the following in your shell or prompt:
 ```
 node index.js
 ```
 
-Production mode (logging to screenlog file):
+Linux users can start background process as such:
 ```
 ./restart.sh     # this (re)starts a new background screen session of the bot, closing your terminal will keep the process running.
 
