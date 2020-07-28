@@ -103,7 +103,7 @@ Using Mozilla DeepSpeech for speech recognition, [tutorial](https://medium.com/@
 
 ## Contact
 
-For questions, feedback or issues feel free to get in touch with me.
+For enquiries or issues get in touch with me:
 
 Name: Ilya Nevolin
 
