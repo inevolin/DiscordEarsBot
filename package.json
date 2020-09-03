@@ -22,7 +22,7 @@
     "discord.js": "^12.3.1",
     "node-witai-speech": "^1.0.2",
     "request": "^2.88.2",
-    "underscore": "^1.11.0"
-    "sox-audio": "git://github.com/healzer/sox-audio.git",
+    "underscore": "^1.11.0",
+    "sox-audio": "git://github.com/healzer/sox-audio.git"
   }
 }
