@@ -273,7 +273,7 @@ function speak_impl(voice_Connection, mapKey) {
                     const outfile = newfilename + '.wav';
                     try {
                         convert_audio(infile, outfile, async () => {
-                            let out = await transcribe_witai(outfile);
+                            let out = await transcribe(outfile);
                             if (out != null)
                                 process_commands_query(out, mapKey, user);
                             if (!val.debug) {
@@ -309,6 +309,13 @@ function process_commands_query(txt, mapKey, user) {
 //////////////////////////////////////////
 //////////////// SPEECH //////////////////
 //////////////////////////////////////////
+async function transcribe(file) {
+
+  return transcribe_witai(file)
+  // return transcribe_gspeech(file)
+}
+
+// WitAI
 let witAI_lastcallTS = null;
 const witClient = require('node-witai-speech');
 async function transcribe_witai(file) {
@@ -341,6 +348,43 @@ async function transcribe_witai(file) {
         return output;
     } catch (e) { console.log('transcribe_witai 851:' + e) }
 }
+
+// Google Speech API
+// https://cloud.google.com/docs/authentication/production
+const gspeech = require('@google-cloud/speech');
+const gspeechclient = new gspeech.SpeechClient({
+  projectId: 'discordbot',
+  keyFilename: 'gspeech_key.json'
+});
+
+async function transcribe_gspeech(file) {
+  try {
+      console.log('transcribe_gspeech')
+      const rfile = fs.readFileSync(file);
+      const bytes = rfile.toString('base64');
+      const audio = {
+        content: bytes,
+      };
+      const config = {
+        encoding: 'LINEAR16',
+        sampleRateHertz: 16000,
+        languageCode: 'en-US',  // https://cloud.google.com/speech-to-text/docs/languages
+      };
+      const request = {
+        audio: audio,
+        config: config,
+      };
+
+      const [response] = await gspeechclient.recognize(request);
+      const transcription = response.results
+        .map(result => result.alternatives[0].transcript)
+        .join('\n');
+      console.log(`gspeech: ${transcription}`);
+      return transcription;
+
+  } catch (e) { console.log('transcribe_gspeech 368:' + e) }
+}
+
 //////////////////////////////////////////
 //////////////////////////////////////////
 //////////////////////////////////////////
