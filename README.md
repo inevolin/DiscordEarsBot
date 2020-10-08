@@ -101,7 +101,7 @@ If you're not speaking English on Discord, then change your default language on 
 ## For developers
 Using Mozilla DeepSpeech for speech recognition, [tutorial](https://medium.com/@ilyanevolin/discord-stt-bot-using-mozilla-deepspeech-e77ee28937eb).
 
-## Speech-To-Text
+### Speech-To-Text
 
 By default WitAI's free API is used for voice recognition / transcription. But you can easily integrate any other API into the bot. You can use Google's Speech-to-Text API as follows:
 
