@@ -51,39 +51,36 @@ function sleep(ms) {
   });
 }
 
+const SampleRate = require('node-libsamplerate');
+let resampleoptions = {
+    type: 0, // quality (0:high to 4:low)
+    channels: 2, // input
+    fromRate: 48000,
+    fromDepth: 16,
+    toRate: 16000,
+    toDepth: 16
+}
 
 async function convert_audio(infile, outfile, cb) {
     try {
-        let SoxCommand = require('sox-audio');
-        let command = SoxCommand();
-        streamin = fs.createReadStream(infile);
-        streamout = fs.createWriteStream(outfile);
-        command.input(streamin)
-            .inputSampleRate(48000)
-            .inputEncoding('signed')
-            .inputBits(16)
-            .inputChannels(2)
-            .inputFileType('raw')
-            .output(streamout)
-            .outputSampleRate(16000)
-            .outputEncoding('signed')
-            .outputBits(16)
-            .outputChannels(1)
-            .outputFileType('wav');
-
-        command.on('end', function() {
-            streamout.close();
-            streamin.close();
+        // down-sample 48kHz to 16kHz
+        const resample = new SampleRate(resampleoptions);
+        const streamin = fs.createReadStream(infile);
+        const streamout = fs.createWriteStream(outfile);
+        streamin.pipe(resample).pipe(streamout);
+        streamout.on('finish', () => {
+            // stereo to mono channel
+            const data = new Int16Array(fs.readFileSync(outfile))
+            const ndata = new Int16Array(data.length/2)
+            for (let i = 0, j = 0; i < data.length; i+=4) {
+                ndata[j++] = data[i]
+                ndata[j++] = data[i+1]
+            }
+            fs.writeFileSync(outfile, Buffer.from(ndata), 'binary')
             cb();
-        });
-        command.on('error', function(err, stdout, stderr) {
-            console.log('Cannot process audio: ' + err.message);
-            console.log('Sox Command Stdout: ', stdout);
-            console.log('Sox Command Stderr: ', stderr)
-        });
-
-        command.run();
+        })
     } catch (e) {
+        console.log(e)
         console.log('convert_audio: ' + e)
     }
 }
@@ -99,15 +96,22 @@ async function convert_audio(infile, outfile, cb) {
 const SETTINGS_FILE = 'settings.json';
 
 let DISCORD_TOK = null;
-let witAPIKEY = null; 
+let WITAPIKEY = null; 
 let SPOTIFY_TOKEN_ID = null;
 let SPOTIFY_TOKEN_SECRET = null;
 
 function loadConfig() {
-    const CFG_DATA = JSON.parse( fs.readFileSync(SETTINGS_FILE, 'utf8') );
+    if (fs.existsSync(SETTINGS_FILE)) {
+        const CFG_DATA = JSON.parse( fs.readFileSync(SETTINGS_FILE, 'utf8') );
+        DISCORD_TOK = CFG_DATA.discord_token;
+        WITAPIKEY = CFG_DATA.wit_ai_token;
+    } else {
+        DISCORD_TOK = process.env.DISCORD_TOK;
+        WITAPIKEY = process.env.WITAPIKEY;
+    }
+    if (!DISCORD_TOK || !WITAPIKEY)
+        throw 'failed laoding config #113 missing keys!'
     
-    DISCORD_TOK = CFG_DATA.discord_token;
-    witAPIKEY = CFG_DATA.wit_ai_token;
 }
 loadConfig()
 //////////////////////////////////////////
@@ -337,7 +341,8 @@ async function transcribe_witai(file) {
         console.log('transcribe_witai')
         const extractSpeechIntent = util.promisify(witClient.extractSpeechIntent);
         var stream = fs.createReadStream(file);
-        const output = await extractSpeechIntent(witAPIKEY, stream, "audio/wav")
+        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=16k;endian=little"
+        const output = await extractSpeechIntent(WITAPIKEY, stream, contenttype)
         witAI_lastcallTS = Math.floor(new Date());
         console.log(output)
         stream.destroy()
@@ -346,7 +351,7 @@ async function transcribe_witai(file) {
         if (output && 'text' in output && output.text.length)
             return output.text
         return output;
-    } catch (e) { console.log('transcribe_witai 851:' + e) }
+    } catch (e) { console.log('transcribe_witai 851:' + e); console.log(e) }
 }
 
 // Google Speech API
@@ -388,3 +393,4 @@ async function transcribe_gspeech(file) {
 //////////////////////////////////////////
 //////////////////////////////////////////
 //////////////////////////////////////////
+
