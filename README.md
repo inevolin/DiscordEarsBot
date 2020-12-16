@@ -80,9 +80,7 @@ By now you have a discord server, the DiscordEarsBot is running and is a part of
 
 ## Language
 WitAI supports over 120 languages (https://wit.ai/faq), however only one language can be used at a time.
-If you're not speaking English on Discord, then change your default language on your witAI account:
-
-![Discord Ears Bot Demo](https://i.imgur.com/G19bGYe.png)
+If you're not speaking English on Discord, then change your default language on WitAI under "settings" for your app.
 
 You can also change the language using the following bot command:
 
