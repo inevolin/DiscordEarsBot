@@ -84,6 +84,19 @@ If you're not speaking English on Discord, then change your default language on 
 
 ![Discord Ears Bot Demo](https://i.imgur.com/G19bGYe.png)
 
+You can also change the language using the following bot command:
+
+```
+*lang <code>
+
+*lang en     for English
+*lang es     for Spanish
+*lang ru     for Russian
+...
+
+<code> should be an ISO 639-1 language code (2 digits): https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+```
+
 ## For developers
 Using Mozilla DeepSpeech for speech recognition, [tutorial](https://medium.com/@ilyanevolin/discord-stt-bot-using-mozilla-deepspeech-e77ee28937eb).
 
