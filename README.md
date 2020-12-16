@@ -10,41 +10,23 @@ Try the bot for yourself on our Discord server: https://discord.gg/ApdTMG9
 
 You can follow the steps below to get this bot up and running.
 
-## Heroku (optional)
+## Heroku
 If you don't have a linux server/machine then you can use Heroku for hosting your bot 24/7 and it's free.
-I wrote an easy step-by-step guide [here](https://medium.com/@ilyanevolin/deploying-my-discord-bots-on-heroku-105752941706).
+Under "Resources" tab, use the "worker" deno type, and not the "web" one.
 
-## Docker (optional)
-If you prefer using Docker instead of manually installing it:
-1. Save the `Dockerfile`
-2. Create a file `settings.json` and configure it (see Settings part)
-3. run `docker build -t discordearsbot .`  this may take a minute or two.
-4. run `docker run -it discordearsbot`
-5. skip to Usage part.
+## Docker
+If you prefer using Docker instead of manually installing it, you may need to edit the `Dockerfile`.
+1. Use `settings.json` or environment variables to provide the API credentials (see settings part below).
+2. run `docker build -t discordspeechbot .`  this may take a minute or two.
+3. run `docker run -it discordspeechbot`
+4. Proceed to Usage part below.
 
-## Linux Installation
+## Installation
 You need nodeJS version 12+ with npm on your machine.
-```
-sudo apt-get install -y sox screen
-git clone https://github.com/healzer/DiscordEarsBot.git
-cd DiscordEarsBot
-npm install
-```
-
-## Windows Installation
-
-Tutorial: https://www.youtube.com/watch?v=uD_Neq9DYn0
-
-You need nodeJS version 12+ with npm on your machine.
-
-Download and install the latest version of "sox" for Windows: https://sourceforge.net/projects/sox/files/sox/
-
-You may need to manually add sox to your environment variables, here's a tutorial: https://stackoverflow.com/questions/17667491/how-to-use-sox-in-windows
-
 Using shell or command prompt execute the following:
 ```
-git clone https://github.com/healzer/DiscordEarsBot.git
-cd DiscordEarsBot
+git clone https://github.com/healzer/DiscordSpeechBot.git
+cd DiscordSpeechBot
 npm install
 ```
 
@@ -61,6 +43,12 @@ Rename the file `settings-sample.json` to `settings.json` and enter the obtained
 }
 ```
 
+If you are using Digitalocean Apps, Heroku or another service you can also use Environment Variables instead of a settings file. Configure these with the appropriate values:
+```
+DISCORD_TOK
+WITAPIKEY
+```
+
 ## Running
 
 Execute the following in your shell or prompt:
@@ -68,11 +56,9 @@ Execute the following in your shell or prompt:
 node index.js
 ```
 
-Linux users can start background process as such:
+Use [PM2](https://www.npmjs.com/package/pm2) to keep the bot running 24/7, it will also restart the bot in case of a crash or on memory limits (2GB default):
 ```
-./restart.sh     # this (re)starts a new background screen session of the bot, closing your terminal will keep the process running.
-
-./close.sh       # this closes the background screen session.
+pm2 start ecosystem.config.js
 ```
 
 ## Usage
