@@ -17,4 +17,4 @@ COPY settings.json /var/www/DiscordEarsBot/settings.json
 
 RUN npm install
 
-CMD ["npm", "start"]
+CMD ["node", "index.js"]
