@@ -92,7 +92,10 @@ You can also change the language using the following bot command:
 *lang ru     for Russian
 ...
 
-<code> should be an ISO 639-1 language code (2 digits): https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+The bot should reply with a success message.
+
+<code> should be an ISO 639-1 language code (2 digits):
+https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 ```
 
 ## For developers
