@@ -4,6 +4,7 @@ data/
 temp/
 screenlog*
 package-lock.json
+Dockerfile
 
 # Logs
 logs
