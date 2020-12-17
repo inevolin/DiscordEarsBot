@@ -6,7 +6,7 @@ WORKDIR /var/www/DiscordEarsBot
 
 RUN apt-get -y update
 RUN apt-get -y upgrade
-RUN apt-get install -y git vim
+RUN apt-get install -y git vim g++
 
 RUN apt-get -y install curl dirmngr apt-transport-https lsb-release ca-certificates
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
@@ -14,6 +14,7 @@ RUN apt-get -y install nodejs
 
 RUN git clone https://github.com/healzer/DiscordEarsBot.git .
 RUN npm install
+RUN npm update
 
 # provide API credentials through the settings.json file OR the environment variables: 
 
