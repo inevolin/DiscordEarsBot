@@ -3,7 +3,6 @@ settings.json
 data/
 temp/
 screenlog*
-package-lock.json
 Dockerfile
 
 # Logs
