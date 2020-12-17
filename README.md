@@ -15,11 +15,15 @@ If you don't have a linux server/machine then you can use Heroku for hosting you
 Under "Resources" tab, use the "worker" deno type, and not the "web" one. You will need to configure the "Config Vars" under "Settings" tab, these are the environment variables from the settings section below.
 
 ## Docker
-If you prefer using Docker instead of manually installing it, you may need to edit the `Dockerfile`.
-1. Use `settings.json` or environment variables to provide the API credentials (see settings part below).
-2. run `docker build -t discordearsbot .`  this may take a minute or two.
-3. run `docker run -it discordearsbot`
-4. Proceed to Usage part below.
+If you prefer using Docker instead of manually installing it.
+Copy the `Dockerfile.sample` to `Dockerfile` and edit it.
+Near the bottom you have to provide API Credentials either using the `settings.json` file or setting the ENV variables.
+Refer to the settings section below for details on these.
+Once you've configured the Dockerfile you can build and run it:
+
+1. run `docker build -t discordearsbot .`  this may take a minute or two.
+2. run `docker run -it discordearsbot`
+3. Proceed to Usage section below.
 
 ## Installation
 You need nodeJS version 12+ with npm on your machine.
