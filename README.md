@@ -17,16 +17,16 @@ Under "Resources" tab, use the "worker" deno type, and not the "web" one. You wi
 ## Docker
 If you prefer using Docker instead of manually installing it, you may need to edit the `Dockerfile`.
 1. Use `settings.json` or environment variables to provide the API credentials (see settings part below).
-2. run `docker build -t discordspeechbot .`  this may take a minute or two.
-3. run `docker run -it discordspeechbot`
+2. run `docker build -t discordearsbot .`  this may take a minute or two.
+3. run `docker run -it discordearsbot`
 4. Proceed to Usage part below.
 
 ## Installation
 You need nodeJS version 12+ with npm on your machine.
 Using shell or command prompt execute the following:
 ```
-git clone https://github.com/healzer/DiscordSpeechBot.git
-cd DiscordSpeechBot
+git clone https://github.com/healzer/DiscordEarsBot.git
+cd DiscordEarsBot
 npm install
 ```
 
