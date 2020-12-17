@@ -110,7 +110,7 @@ function loadConfig() {
         WITAPIKEY = process.env.WITAPIKEY;
     }
     if (!DISCORD_TOK || !WITAPIKEY)
-        throw 'failed laoding config #113 missing keys!'
+        throw 'failed loading config #113 missing keys!'
     
 }
 loadConfig()
