@@ -24,4 +24,4 @@ RUN npm install pm2@latest -g
 # ENV DISCORD_TOK=
 # ENV WITAPIKEY=
 
-CMD git pull && npm install && npm update && pm2 start ecosystem.config.js
+CMD git pull && npm update && pm2 start ecosystem.config.js
