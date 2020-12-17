@@ -12,9 +12,13 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 RUN apt -y install nodejs
 
 RUN git clone https://github.com/healzer/DiscordEarsBot.git .
-
-COPY settings.json /var/www/DiscordEarsBot/settings.json
-
 RUN npm install
 
-CMD ["node", "index.js"]
+# provide API credentials through the settings.json file OR the environment variables: 
+
+# COPY settings.json /var/www/DiscordEarsBot/settings.json
+
+# ENV DISCORD_TOK=
+# ENV WITAPIKEY=
+
+CMD git pull && npm install && npm update && node index.js
