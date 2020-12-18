@@ -186,6 +186,8 @@ function updateWitAIAppLang(appID, lang, cb) {
 const Discord = require('discord.js')
 const DISCORD_MSG_LIMIT = 2000;
 const discordClient = new Discord.Client()
+if (process.env.DEBUG)
+    discordClient.on('debug', console.debug);
 discordClient.on('ready', () => {
     console.log(`Logged in as ${discordClient.user.tag}!`)
 })
