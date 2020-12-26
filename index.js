@@ -51,37 +51,20 @@ function sleep(ms) {
   });
 }
 
-const SampleRate = require('node-libsamplerate');
-let resampleoptions = {
-    type: 0, // quality (0:high to 4:low)
-    channels: 2, // input
-    fromRate: 48000,
-    fromDepth: 16,
-    toRate: 16000,
-    toDepth: 16
-}
-
-async function convert_audio(infile, outfile, cb) {
+async function convert_audio(infile, outfile) {
     try {
-        // down-sample 48kHz to 16kHz
-        const resample = new SampleRate(resampleoptions);
-        const streamin = fs.createReadStream(infile);
-        const streamout = fs.createWriteStream(outfile);
-        streamin.pipe(resample).pipe(streamout);
-        streamout.on('finish', () => {
-            // stereo to mono channel
-            const data = new Int16Array(fs.readFileSync(outfile))
-            const ndata = new Int16Array(data.length/2)
-            for (let i = 0, j = 0; i < data.length; i+=4) {
-                ndata[j++] = data[i]
-                ndata[j++] = data[i+1]
-            }
-            fs.writeFileSync(outfile, Buffer.from(ndata), 'binary')
-            cb();
-        })
+        // stereo to mono channel
+        const data = new Int16Array(fs.readFileSync(infile))
+        const ndata = new Int16Array(data.length/2)
+        for (let i = 0, j = 0; i < data.length; i+=4) {
+            ndata[j++] = data[i]
+            ndata[j++] = data[i+1]
+        }
+        fs.writeFileSync(outfile, Buffer.from(ndata), 'binary')
     } catch (e) {
         console.log(e)
         console.log('convert_audio: ' + e)
+        throw e;
     }
 }
 //////////////////////////////////////////
@@ -349,7 +332,7 @@ function speak_impl(voice_Connection, mapKey) {
             }
 
             const newfilename = filename.replace('.tmp', '.raw');
-            fs.rename(filename, newfilename, (err) => {
+            fs.rename(filename, newfilename, async (err) => {
                 if (err) {
                     console.log('ERROR270:' + err)
                     fs.unlinkSync(filename)
@@ -358,15 +341,14 @@ function speak_impl(voice_Connection, mapKey) {
                     const infile = newfilename;
                     const outfile = newfilename + '.wav';
                     try {
-                        convert_audio(infile, outfile, async () => {
-                            let out = await transcribe(outfile);
-                            if (out != null)
-                                process_commands_query(out, mapKey, user);
-                            if (!val.debug) {
-                                fs.unlinkSync(infile)
-                                fs.unlinkSync(outfile)
-                            }
-                        })
+                        await convert_audio(infile, outfile)
+                        let out = await transcribe(outfile);
+                        if (out != null)
+                            process_commands_query(out, mapKey, user);
+                        if (!val.debug) {
+                            fs.unlinkSync(infile)
+                            fs.unlinkSync(outfile)
+                        }
                     } catch (e) {
                         console.log('tmpraw rename: ' + e)
                         if (!val.debug) {
@@ -423,7 +405,7 @@ async function transcribe_witai(file) {
         console.log('transcribe_witai')
         const extractSpeechIntent = util.promisify(witClient.extractSpeechIntent);
         var stream = fs.createReadStream(file);
-        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=16k;endian=little"
+        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=48k;endian=little"
         const output = await extractSpeechIntent(WITAPIKEY, stream, contenttype)
         witAI_lastcallTS = Math.floor(new Date());
         console.log(output)
@@ -454,7 +436,7 @@ async function transcribe_gspeech(file) {
       };
       const config = {
         encoding: 'LINEAR16',
-        sampleRateHertz: 16000,
+        sampleRateHertz: 48000,
         languageCode: 'en-US',  // https://cloud.google.com/speech-to-text/docs/languages
       };
       const request = {

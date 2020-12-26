@@ -21,9 +21,9 @@
     "@discordjs/opus": "^0.1.0",
     "@google-cloud/speech": "^4.1.4",
     "discord.js": "^12.5.1",
-    "node-libsamplerate": "^1.0.0",
     "node-witai-speech": "^1.0.2",
     "request": "^2.88.2",
-    "underscore": "^1.12.0"
+    "underscore": "^1.12.0",
+    "wave-resampler": "^1.0.0"
   }
 }
