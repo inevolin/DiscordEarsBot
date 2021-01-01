@@ -14,6 +14,8 @@ You can follow the steps below to get this bot up and running.
 If you don't have a linux server/machine then you can use Heroku for hosting your bot 24/7 and it's free.
 Under "Resources" tab, use the "worker" deno type, and not the "web" one. You will need to configure the "Config Vars" under "Settings" tab, these are the environment variables from the settings section below.
 
+Tutorial: https://dev.to/codr/discord-ears-bot-on-heroku-4606
+
 ## Docker
 If you prefer using Docker instead of manually installing it.
 Copy the `Dockerfile.sample` to `Dockerfile` and edit it.
