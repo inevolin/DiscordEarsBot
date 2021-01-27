@@ -15,35 +15,18 @@ console.log = function () {
 const fs = require('fs');
 const util = require('util');
 const path = require('path');
+const { Readable } = require('stream');
 
 //////////////////////////////////////////
 ///////////////// VARIA //////////////////
 //////////////////////////////////////////
 
 function necessary_dirs() {
-    if (!fs.existsSync('./temp/')){
-        fs.mkdirSync('./temp/');
-    }
     if (!fs.existsSync('./data/')){
         fs.mkdirSync('./data/');
     }
 }
 necessary_dirs()
-
-
-function clean_temp() {
-    const dd = './temp/';
-    fs.readdir(dd, (err, files) => {
-        if (err) throw err;
-
-        for (const file of files) {
-            fs.unlink(path.join(dd, file), err => {
-                if (err) throw err;
-            });
-        }
-    });
-}
-clean_temp(); // clean files at startup
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -51,16 +34,16 @@ function sleep(ms) {
   });
 }
 
-async function convert_audio(infile, outfile) {
+async function convert_audio(input) {
     try {
         // stereo to mono channel
-        const data = new Int16Array(fs.readFileSync(infile))
+        const data = new Int16Array(input)
         const ndata = new Int16Array(data.length/2)
         for (let i = 0, j = 0; i < data.length; i+=4) {
             ndata[j++] = data[i]
             ndata[j++] = data[i+1]
         }
-        fs.writeFileSync(outfile, Buffer.from(ndata), 'binary')
+        return Buffer.from(ndata);
     } catch (e) {
         console.log(e)
         console.log('convert_audio: ' + e)
@@ -299,66 +282,38 @@ function speak_impl(voice_Connection, mapKey) {
             return
         }
         console.log(`I'm listening to ${user.username}`)
-
-        const filename = './temp/audio_' + mapKey + '_' + user.username.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_' + Date.now() + '.tmp';
-        let ws = fs.createWriteStream(filename);
-
         // this creates a 16-bit signed PCM, stereo 48KHz stream
         const audioStream = voice_Connection.receiver.createStream(user, { mode: 'pcm' })
-        audioStream.pipe(ws)
-
         audioStream.on('error',  (e) => { 
             console.log('audioStream: ' + e)
         });
-        ws.on('error',  (e) => { 
-            console.log('ws error: ' + e)
-        });
-
-        audioStream.on('end', processAudio);
-        function processAudio() {
-            const stats = fs.statSync(filename);
-            const fileSizeInBytes = stats.size;
-            const duration = fileSizeInBytes / 48000 / 4;
+        let buffer = [];
+        audioStream.on('data', (data) => {
+            buffer.push(data)
+        })
+        audioStream.on('end', async () => {
+            buffer = Buffer.concat(buffer)
+            const duration = buffer.length / 48000 / 4;
             console.log("duration: " + duration)
 
-            if (duration < 0.5 || duration > 19) {
+            if (duration < 1.0 || duration > 19) { // 20 seconds max dur
                 console.log("TOO SHORT / TOO LONG; SKPPING")
-                fs.unlinkSync(filename)
                 return;
             }
 
-            const newfilename = filename.replace('.tmp', '.raw');
-            fs.rename(filename, newfilename, async (err) => {
-                if (err) {
-                    console.log('ERROR270:' + err)
-                    fs.unlinkSync(filename)
-                } else {
-                    let val = guildMap.get(mapKey)
-                    const infile = newfilename;
-                    const outfile = newfilename + '.wav';
-                    try {
-                        await convert_audio(infile, outfile)
-                        let out = await transcribe(outfile);
-                        if (out != null)
-                            process_commands_query(out, mapKey, user);
-                        if (!val.debug) {
-                            fs.unlinkSync(infile)
-                            fs.unlinkSync(outfile)
-                        }
-                    } catch (e) {
-                        console.log('tmpraw rename: ' + e)
-                        if (!val.debug) {
-                            fs.unlinkSync(infile)
-                            fs.unlinkSync(outfile)
-                        }
-                    }
-                }
+            try {
+                let new_buffer = await convert_audio(buffer)
+                let out = await transcribe(new_buffer);
+                if (out != null)
+                    process_commands_query(out, mapKey, user.id);
+            } catch (e) {
+                console.log('tmpraw rename: ' + e)
+            }
 
-            });
-        }
+
+        })
     })
 }
-
 
 function process_commands_query(txt, mapKey, user) {
     if (txt && txt.length) {
@@ -371,16 +326,16 @@ function process_commands_query(txt, mapKey, user) {
 //////////////////////////////////////////
 //////////////// SPEECH //////////////////
 //////////////////////////////////////////
-async function transcribe(file) {
+async function transcribe(buffer) {
 
-  return transcribe_witai(file)
-  // return transcribe_gspeech(file)
+  return transcribe_witai(buffer)
+  // return transcribe_gspeech(buffer)
 }
 
 // WitAI
 let witAI_lastcallTS = null;
 const witClient = require('node-witai-speech');
-async function transcribe_witai(file) {
+async function transcribe_witai(buffer) {
     try {
         // ensure we do not send more than one request per second
         if (witAI_lastcallTS != null) {
@@ -398,7 +353,7 @@ async function transcribe_witai(file) {
     try {
         console.log('transcribe_witai')
         const extractSpeechIntent = util.promisify(witClient.extractSpeechIntent);
-        var stream = fs.createReadStream(file);
+        var stream = Readable.from(buffer);
         const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=48k;endian=little"
         const output = await extractSpeechIntent(WITAPIKEY, stream, contenttype)
         witAI_lastcallTS = Math.floor(new Date());
@@ -420,11 +375,10 @@ const gspeechclient = new gspeech.SpeechClient({
   keyFilename: 'gspeech_key.json'
 });
 
-async function transcribe_gspeech(file) {
+async function transcribe_gspeech(buffer) {
   try {
       console.log('transcribe_gspeech')
-      const rfile = fs.readFileSync(file);
-      const bytes = rfile.toString('base64');
+      const bytes = buffer.toString('base64');
       const audio = {
         content: bytes,
       };
