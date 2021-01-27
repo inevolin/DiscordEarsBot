@@ -205,8 +205,7 @@ discordClient.on('message', async (msg) => {
                 let val = guildMap.get(mapKey);
                 if (val.voice_Channel) val.voice_Channel.leave()
                 if (val.voice_Connection) val.voice_Connection.disconnect()
-                if (val.musicYTStream) val.musicYTStream.destroy()
-                    guildMap.delete(mapKey)
+                guildMap.delete(mapKey)
                 msg.reply("Disconnected.")
             } else {
                 msg.reply("Cannot leave because not connected.")
@@ -278,11 +277,6 @@ async function connect(msg, mapKey) {
             'text_Channel': text_Channel,
             'voice_Channel': voice_Channel,
             'voice_Connection': voice_Connection,
-            'musicQueue': [],
-            'musicDispatcher': null,
-            'musicYTStream': null,
-            'currentPlayingTitle': null,
-            'currentPlayingQuery': null,
             'debug': false,
         });
         speak_impl(voice_Connection, mapKey)
@@ -301,7 +295,7 @@ async function connect(msg, mapKey) {
 
 function speak_impl(voice_Connection, mapKey) {
     voice_Connection.on('speaking', async (user, speaking) => {
-        if (speaking.bitfield == 0 /*|| user.bot*/) {
+        if (speaking.bitfield == 0 || user.bot) {
             return
         }
         console.log(`I'm listening to ${user.username}`)
@@ -319,7 +313,9 @@ function speak_impl(voice_Connection, mapKey) {
         ws.on('error',  (e) => { 
             console.log('ws error: ' + e)
         });
-        audioStream.on('end', async () => {
+
+        audioStream.on('end', processAudio);
+        function processAudio() {
             const stats = fs.statSync(filename);
             const fileSizeInBytes = stats.size;
             const duration = fileSizeInBytes / 48000 / 4;
@@ -359,9 +355,7 @@ function speak_impl(voice_Connection, mapKey) {
                 }
 
             });
-
-
-        })
+        }
     })
 }
 
