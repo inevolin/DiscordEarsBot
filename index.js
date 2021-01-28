@@ -237,8 +237,6 @@ function getHelpString() {
     return out;
 }
 
-const { Readable } = require('stream');
-
 const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
 
 class Silence extends Readable {
