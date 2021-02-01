@@ -122,7 +122,7 @@ By default WitAI's free API is used for voice recognition / transcription. But y
 
 For enquiries or issues get in touch with me:
 
-Name: Ilya Nevolin
+Name: [Ilya Nevolin](https://www.linkedin.com/in/iljanevolin/)
 
 Email: ilja.nevolin@gmail.com
 
