@@ -10,6 +10,9 @@ Try the bot for yourself on our Discord server: https://discord.gg/ApdTMG9
 
 You can follow the steps below to get this bot up and running.
 
+## Quick Install
+Video Tutorial: https://www.youtube.com/watch?v=y9OOM-c6nik
+
 ## Heroku
 If you don't have a linux server/machine then you can use Heroku for hosting your bot 24/7 and it's free.
 Under "Resources" tab, use the "worker" deno type, and not the "web" one. You will need to configure the "Config Vars" under "Settings" tab, these are the environment variables from the settings section below.
