@@ -2,16 +2,15 @@
 A speech-to-text bot for Discord written in NodeJS.
 Can be useful for hearing impaired and deaf people.
 
-## Demo:
+## Getting Started:
 
-[![Discord Ears Bot Demo](http://img.youtube.com/vi/DoT2rdLymNc/0.jpg)](http://www.youtube.com/watch?v=DoT2rdLymNc "Discord Ears Bot Demo")
+### Installation Tutorial
+
+[![Discord Ears Bot Demo](https://img.youtube.com/vi/y9OOM-c6nik/0.jpg)](https://www.youtube.com/watch?v=y9OOM-c6nik "Discord Ears Bot Demo")
 
 Try the bot for yourself on our Discord server: https://discord.gg/ApdTMG9
 
-You can follow the steps below to get this bot up and running.
-
-## Quick Install
-Video Tutorial: https://www.youtube.com/watch?v=y9OOM-c6nik
+Advanced users & developers can follow the steps below to get this bot up and running.
 
 ## Heroku
 If you don't have a linux server/machine then you can use Heroku for hosting your bot 24/7 and it's free.
