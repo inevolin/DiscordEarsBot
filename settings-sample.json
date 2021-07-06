@@ -1,5 +1,5 @@
 {
-    "discord_token": "",
-    "wit_ai_token": "",
+    "DISCORD_TOK": "",
+    "WITAI_TOK": "",
     "SPEECH_METHOD": ""
 }
