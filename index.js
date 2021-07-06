@@ -63,18 +63,27 @@ const SETTINGS_FILE = 'settings.json';
 
 let DISCORD_TOK = null;
 let WITAPIKEY = null; 
+let SPEECH_METHOD = 'vosk'; // witai, google, vosk
 
 function loadConfig() {
     if (fs.existsSync(SETTINGS_FILE)) {
         const CFG_DATA = JSON.parse( fs.readFileSync(SETTINGS_FILE, 'utf8') );
         DISCORD_TOK = CFG_DATA.discord_token;
         WITAPIKEY = CFG_DATA.wit_ai_token;
-    } else {
-        DISCORD_TOK = process.env.DISCORD_TOK;
-        WITAPIKEY = process.env.WITAPIKEY;
+        SPEECH_METHOD = CFG_DATA.SPEECH_METHOD;
     }
-    if (!DISCORD_TOK || !WITAPIKEY)
-        throw 'failed loading config #113 missing keys!'
+    DISCORD_TOK = process.env.DISCORD_TOK || DISCORD_TOK;
+    WITAPIKEY = process.env.WITAPIKEY || WITAPIKEY;
+    SPEECH_METHOD = process.env.SPEECH_METHOD || SPEECH_METHOD;
+
+    if (!['witai', 'google', 'vosk'].includes(SPEECH_METHOD))
+        throw 'invalid or missing SPEECH_METHOD'
+    if (!DISCORD_TOK)
+        throw 'invalid or missing DISCORD_TOK'
+    if (SPEECH_METHOD === 'witai' && !WITAPIKEY)
+        throw 'invalid or missing WITAPIKEY'
+    if (SPEECH_METHOD === 'google' && !fs.existsSync('./gspeech_key.json'))
+        throw 'missing gspeech_key.json'
     
 }
 loadConfig()
@@ -206,19 +215,23 @@ discordClient.on('message', async (msg) => {
             msg.reply('hello back =)')
         }
         else if (msg.content.split('\n')[0].split(' ')[0].trim().toLowerCase() == _CMD_LANG) {
-            const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
-            listWitAIApps(data => {
-              if (!data.length)
-                return msg.reply('no apps found! :(')
-              for (const x of data) {
-                updateWitAIAppLang(x.id, lang, data => {
-                  if ('success' in data)
-                    msg.reply('succes!')
-                  else if ('error' in data && data.error !== 'Access token does not match')
-                    msg.reply('Error: ' + data.error)
-                })
-              }
-            })
+            if (SPEECH_METHOD === 'witai') {
+              const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
+              listWitAIApps(data => {
+                if (!data.length)
+                  return msg.reply('no apps found! :(')
+                for (const x of data) {
+                  updateWitAIAppLang(x.id, lang, data => {
+                    if ('success' in data)
+                      msg.reply('succes!')
+                    else if ('error' in data && data.error !== 'Access token does not match')
+                      msg.reply('Error: ' + data.error)
+                  })
+                }
+              })
+            } else {
+              msg.reply('Error: this feature is only for WitAI')
+            }
         }
     } catch (e) {
         console.log('discordClient message: ' + e)
@@ -271,6 +284,16 @@ async function connect(msg, mapKey) {
     }
 }
 
+const vosk = require('vosk');
+if (SPEECH_METHOD === 'vosk') {
+  vosk.setLogLevel(-1);
+  // MODELS: https://alphacephei.com/vosk/models
+  const model = new vosk.Model('vosk_models/en');
+  const rec = new vosk.Recognizer({model: model, sampleRate: 48000});
+  vosk._rec_ = rec;
+  // dev reference: https://github.com/alphacep/vosk-api/blob/master/nodejs/index.js
+}
+
 
 function speak_impl(voice_Connection, mapKey) {
     voice_Connection.on('speaking', async (user, speaking) => {
@@ -292,9 +315,11 @@ function speak_impl(voice_Connection, mapKey) {
             const duration = buffer.length / 48000 / 4;
             console.log("duration: " + duration)
 
+            if (SPEECH_METHOD === 'witai' || SPEECH_METHOD === 'google') {
             if (duration < 1.0 || duration > 19) { // 20 seconds max dur
                 console.log("TOO SHORT / TOO LONG; SKPPING")
                 return;
+            }
             }
 
             try {
@@ -323,9 +348,16 @@ function process_commands_query(txt, mapKey, user) {
 //////////////// SPEECH //////////////////
 //////////////////////////////////////////
 async function transcribe(buffer) {
-
-  return transcribe_witai(buffer)
-  // return transcribe_gspeech(buffer)
+  if (SPEECH_METHOD === 'witai') {
+      return transcribe_witai(buffer)
+  } else if (SPEECH_METHOD === 'google') {
+      return transcribe_gspeech(buffer)
+  } else if (SPEECH_METHOD === 'vosk') {
+      vosk._rec_.acceptWaveform(buffer);
+      let ret = vosk._rec_.result().text;
+      console.log('vosk:', ret)
+      return ret;
+  }
 }
 
 // WitAI
