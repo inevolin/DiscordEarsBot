@@ -38,11 +38,7 @@ async function convert_audio(input) {
     try {
         // stereo to mono channel
         const data = new Int16Array(input)
-        const ndata = new Int16Array(data.length/2)
-        for (let i = 0, j = 0; i < data.length; i+=4) {
-            ndata[j++] = data[i]
-            ndata[j++] = data[i+1]
-        }
+        const ndata = data.filter((el, idx) => idx % 2);
         return Buffer.from(ndata);
     } catch (e) {
         console.log(e)
@@ -229,8 +225,12 @@ discordClient.on('message', async (msg) => {
                   })
                 }
               })
+            } else if (SPEECH_METHOD === 'vosk') {
+              let val = guildMap.get(mapKey);
+              const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
+              val.selected_lang = lang;
             } else {
-              msg.reply('Error: this feature is only for WitAI')
+              msg.reply('Error: this feature is only for Google')
             }
         }
     } catch (e) {
@@ -270,6 +270,7 @@ async function connect(msg, mapKey) {
             'text_Channel': text_Channel,
             'voice_Channel': voice_Channel,
             'voice_Connection': voice_Connection,
+            'selected_lang': 'en',
             'debug': false,
         });
         speak_impl(voice_Connection, mapKey)
@@ -286,12 +287,16 @@ async function connect(msg, mapKey) {
 }
 
 const vosk = require('vosk');
+let recs = {}
 if (SPEECH_METHOD === 'vosk') {
   vosk.setLogLevel(-1);
   // MODELS: https://alphacephei.com/vosk/models
-  const model = new vosk.Model('vosk_models/en');
-  const rec = new vosk.Recognizer({model: model, sampleRate: 48000});
-  vosk._rec_ = rec;
+  recs = {
+    'en': new vosk.Recognizer({model: new vosk.Model('vosk_models/en'), sampleRate: 48000}),
+    // 'fr': new vosk.Recognizer({model: new vosk.Model('vosk_models/fr'), sampleRate: 48000}),
+    // 'es': new vosk.Recognizer({model: new vosk.Model('vosk_models/es'), sampleRate: 48000}),
+  }
+  // download new models if you need
   // dev reference: https://github.com/alphacep/vosk-api/blob/master/nodejs/index.js
 }
 
@@ -325,7 +330,7 @@ function speak_impl(voice_Connection, mapKey) {
 
             try {
                 let new_buffer = await convert_audio(buffer)
-                let out = await transcribe(new_buffer);
+                let out = await transcribe(new_buffer, mapKey);
                 if (out != null)
                     process_commands_query(out, mapKey, user);
             } catch (e) {
@@ -348,14 +353,15 @@ function process_commands_query(txt, mapKey, user) {
 //////////////////////////////////////////
 //////////////// SPEECH //////////////////
 //////////////////////////////////////////
-async function transcribe(buffer) {
+async function transcribe(buffer, mapKey) {
   if (SPEECH_METHOD === 'witai') {
       return transcribe_witai(buffer)
   } else if (SPEECH_METHOD === 'google') {
       return transcribe_gspeech(buffer)
   } else if (SPEECH_METHOD === 'vosk') {
-      vosk._rec_.acceptWaveform(buffer);
-      let ret = vosk._rec_.result().text;
+      let val = guildMap.get(mapKey);
+      recs[val.selected_lang].acceptWaveform(buffer);
+      let ret = recs[val.selected_lang].result().text;
       console.log('vosk:', ret)
       return ret;
   }
