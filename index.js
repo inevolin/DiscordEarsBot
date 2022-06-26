@@ -153,8 +153,16 @@ function updateWitAIAppLang(appID, lang, cb) {
 
 
 const Discord = require('discord.js')
+const DiscoidVoice = require('@discordjs/voice')
 const DISCORD_MSG_LIMIT = 2000;
-const discordClient = new Discord.Client()
+const discordClient = new Discord.Client({
+  intents: [
+    Discord.Intents.FLAGS.GUILDS,
+    Discord.Intents.FLAGS.GUILD_MESSAGES,
+    Discord.Intents.FLAGS.GUILD_MEMBERS,
+    Discord.Intents.FLAGS.GUILD_VOICE_STATES
+  ],
+});
 if (process.env.DEBUG)
     discordClient.on('debug', console.debug);
 discordClient.on('ready', () => {
@@ -173,12 +181,12 @@ const _CMD_LANG        = PREFIX + 'lang';
 const guildMap = new Map();
 
 
-discordClient.on('message', async (msg) => {
+discordClient.on('messageCreate', async (msg) => {
     try {
         if (!('guild' in msg) || !msg.guild) return; // prevent private messages to bot
         const mapKey = msg.guild.id;
         if (msg.content.trim().toLowerCase() == _CMD_JOIN) {
-            if (!msg.member.voice.channelID) {
+            if (!msg.member.voice.channelId) {
                 msg.reply('Error: please join a voice channel first.')
             } else {
                 if (!guildMap.has(mapKey))
@@ -189,8 +197,7 @@ discordClient.on('message', async (msg) => {
         } else if (msg.content.trim().toLowerCase() == _CMD_LEAVE) {
             if (guildMap.has(mapKey)) {
                 let val = guildMap.get(mapKey);
-                if (val.voice_Channel) val.voice_Channel.leave()
-                if (val.voice_Connection) val.voice_Connection.disconnect()
+                if (val.voice_Connection) val.voice_Connection.destroy()
                 guildMap.delete(mapKey)
                 msg.reply("Disconnected.")
             } else {
@@ -260,21 +267,23 @@ class Silence extends Readable {
 
 async function connect(msg, mapKey) {
     try {
-        let voice_Channel = await discordClient.channels.fetch(msg.member.voice.channelID);
-        if (!voice_Channel) return msg.reply("Error: The voice channel does not exist!");
         let text_Channel = await discordClient.channels.fetch(msg.channel.id);
         if (!text_Channel) return msg.reply("Error: The text channel does not exist!");
-        let voice_Connection = await voice_Channel.join();
-        voice_Connection.play(new Silence(), { type: 'opus' });
+        let voice_Connection = DiscoidVoice.joinVoiceChannel({
+          adapterCreator: msg.guild.voiceAdapterCreator,
+          channelId: msg.member.voice.channelId,
+          guildId: msg.guild.id,
+          selfDeaf: false,
+        });
+        await DiscoidVoice.entersState(voice_Connection, DiscoidVoice.VoiceConnectionStatus.Ready, 20e3);
         guildMap.set(mapKey, {
             'text_Channel': text_Channel,
-            'voice_Channel': voice_Channel,
             'voice_Connection': voice_Connection,
             'selected_lang': 'en',
             'debug': false,
         });
-        speak_impl(voice_Connection, mapKey)
-        voice_Connection.on('disconnect', async(e) => {
+        speak_impl(voice_Connection.receiver, mapKey)
+        voice_Connection.on(DiscoidVoice.VoiceConnectionStatus.Disconnected, async(e) => {
             if (e) console.log(e);
             guildMap.delete(mapKey);
         })
@@ -300,23 +309,31 @@ if (SPEECH_METHOD === 'vosk') {
   // dev reference: https://github.com/alphacep/vosk-api/blob/master/nodejs/index.js
 }
 
-
-function speak_impl(voice_Connection, mapKey) {
-    voice_Connection.on('speaking', async (user, speaking) => {
-        if (speaking.bitfield == 0 || user.bot) {
+const prism = require('prism-media');
+function speak_impl(receiver, mapKey) {
+    receiver.speaking.on('start', async (userId) => {
+      let user = await discordClient.users.fetch(userId);
+        if (user.bot) {
             return
         }
         console.log(`I'm listening to ${user.username}`)
         // this creates a 16-bit signed PCM, stereo 48KHz stream
-        const audioStream = voice_Connection.receiver.createStream(user, { mode: 'pcm' })
-        audioStream.on('error',  (e) => { 
+        const audioStream = receiver.subscribe(userId, {
+          end: {
+            behavior: DiscoidVoice.EndBehaviorType.AfterSilence,
+            duration: 100,
+          },
+        });
+        const decodedAudioStream = new prism.opus.Decoder({ channels: 2, rate: 48000, frameSize: 960 });
+        audioStream.pipe(decodedAudioStream);
+        decodedAudioStream.on('error',  (e) => { 
             console.log('audioStream: ' + e)
         });
         let buffer = [];
-        audioStream.on('data', (data) => {
+        decodedAudioStream.on('data', (data) => {
             buffer.push(data)
         })
-        audioStream.on('end', async () => {
+        decodedAudioStream.on('end', async () => {
             buffer = Buffer.concat(buffer)
             const duration = buffer.length / 48000 / 4;
             console.log("duration: " + duration)
