@@ -374,10 +374,14 @@ async function transcribe_witai(buffer) {
     try {
         // ensure we do not send more than one request per second
         if (witAI_lastcallTS != null) {
-            let now = Math.floor(new Date());    
+            let now = Math.floor(new Date());
             while (now - witAI_lastcallTS < 1000) {
                 console.log('sleep')
-                await sleep(100);
+                if (now - witAI_lastcallTS > 100) {
+                    await sleep(now - witAI_lastcallTS - 99);
+                } else {
+                    await sleep(100);
+                }
                 now = Math.floor(new Date());
             }
         }
@@ -389,17 +393,65 @@ async function transcribe_witai(buffer) {
         console.log('transcribe_witai')
         const extractSpeechIntent = util.promisify(witClient.extractSpeechIntent);
         var stream = Readable.from(buffer);
-        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=48k;endian=little"
-        const output = await extractSpeechIntent(WITAI_TOK, stream, contenttype)
+        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=48k;endian=little";
+        const multijson = await extractSpeechIntent(WITAI_TOK, stream, contenttype);
+
+        const output = parseMultijson(multijson);
         witAI_lastcallTS = Math.floor(new Date());
-        console.log(output)
-        stream.destroy()
+        console.log(output);
+        stream.destroy();
         if (output && '_text' in output && output._text.length)
-            return output._text
+            return output._text;
         if (output && 'text' in output && output.text.length)
             return output.text
         return output;
     } catch (e) { console.log('transcribe_witai 851:' + e); console.log(e) }
+}
+
+function parseMultijson(multijson) {
+    if (typeof(multijson) !== 'string') {
+        return multijson; // Assume is already parsed as JSON
+    }
+    let isEscaped = false;
+    let lastRootBracket = 0;
+    let inString = false;
+    let bracketDepth = 0;
+    let char;
+    for (let i = 0; i < multijson.length; i++) {
+        if (isEscaped) {
+            isEscaped = false;
+            continue;
+        }
+        char = multijson.charAt(i);
+
+        if (char === "\\") {
+            if (inString) {
+                isEscaped = true;
+            } else {
+                throw "Invalid json: backslash outside string"
+            }
+        } else if (char === "\"") {
+            inString = !inString;
+        } else if (!inString) { 
+            if (char === "{") {
+                if (bracketDepth === 0) {
+                    lastRootBracket = i;
+                }
+                bracketDepth += 1;
+            } else if (char === "}") {
+                bracketDepth -= 1;
+                if (bracketDepth < 0) {
+                    throw "Invalid JSON: unbalanced brackets"
+                }
+            }
+        }
+    }
+
+    if (bracketDepth !== 0) {
+        throw "Invalid JSON: unbalanced brackets"
+    }
+    
+    return JSON.parse(multijson.substring(lastRootBracket));
 }
 
 // Google Speech API
