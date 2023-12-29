@@ -4,7 +4,7 @@
 function getCurrentDateString() {
     return (new Date()).toISOString() + ' ::';
 };
-__originalLog = console.log;
+let __originalLog = console.log;
 console.log = function () {
     var args = [].slice.call(arguments);
     __originalLog.apply(console.log, [getCurrentDateString()].concat(args));
@@ -14,8 +14,14 @@ console.log = function () {
 
 const fs = require('fs');
 const util = require('util');
-const path = require('path');
 const { Readable } = require('stream');
+const { OpusEncoder } = require('@discordjs/opus');
+const https = require('https')
+const { Client, IntentsBitField } = require('discord.js')
+const { joinVoiceChannel, EndBehaviorType } = require('@discordjs/voice');
+const vosk = require('vosk');
+const witClient = require('node-witai-speech');
+const gspeech = require('@google-cloud/speech');
 
 //////////////////////////////////////////
 ///////////////// VARIA //////////////////
@@ -84,7 +90,6 @@ function loadConfig() {
 }
 loadConfig()
 
-const https = require('https')
 function listWitAIApps(cb) {
     const options = {
       hostname: 'api.wit.ai',
@@ -151,10 +156,15 @@ function updateWitAIAppLang(appID, lang, cb) {
 //////////////////////////////////////////
 //////////////////////////////////////////
 
-
-const Discord = require('discord.js')
-const DISCORD_MSG_LIMIT = 2000;
-const discordClient = new Discord.Client()
+const myIntents = new IntentsBitField();
+myIntents.add(
+  IntentsBitField.Flags.GuildPresences,
+  IntentsBitField.Flags.GuildVoiceStates,
+  IntentsBitField.Flags.GuildMessages,
+  IntentsBitField.Flags.MessageContent,
+  IntentsBitField.Flags.Guilds,
+  IntentsBitField.Flags.GuildMessageTyping);
+const discordClient = new Client({intents: myIntents})
 if (process.env.DEBUG)
     discordClient.on('debug', console.debug);
 discordClient.on('ready', () => {
@@ -173,12 +183,12 @@ const _CMD_LANG        = PREFIX + 'lang';
 const guildMap = new Map();
 
 
-discordClient.on('message', async (msg) => {
+discordClient.on('messageCreate', async (msg) => {
     try {
         if (!('guild' in msg) || !msg.guild) return; // prevent private messages to bot
         const mapKey = msg.guild.id;
         if (msg.content.trim().toLowerCase() == _CMD_JOIN) {
-            if (!msg.member.voice.channelID) {
+            if (!msg.member.voice.channel.id) {
                 msg.reply('Error: please join a voice channel first.')
             } else {
                 if (!guildMap.has(mapKey))
@@ -249,23 +259,20 @@ function getHelpString() {
     return out;
 }
 
-const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
-
-class Silence extends Readable {
-  _read() {
-    this.push(SILENCE_FRAME);
-    this.destroy();
-  }
-}
-
 async function connect(msg, mapKey) {
     try {
-        let voice_Channel = await discordClient.channels.fetch(msg.member.voice.channelID);
+        let voice_Channel = await discordClient.channels.fetch(msg.member.voice.channel.id);
         if (!voice_Channel) return msg.reply("Error: The voice channel does not exist!");
         let text_Channel = await discordClient.channels.fetch(msg.channel.id);
         if (!text_Channel) return msg.reply("Error: The text channel does not exist!");
-        let voice_Connection = await voice_Channel.join();
-        voice_Connection.play(new Silence(), { type: 'opus' });
+        const voice_Connection = joinVoiceChannel({
+          channelId: voice_Channel.id,
+          guildId: voice_Channel.guild.id,
+          adapterCreator: voice_Channel.guild.voiceAdapterCreator,
+          selfDeaf: false,
+				  selfMute: true,
+        });
+        // voice_Connection.play(new Silence(), { type: 'opus' });
         guildMap.set(mapKey, {
             'text_Channel': text_Channel,
             'voice_Channel': voice_Channel,
@@ -286,7 +293,6 @@ async function connect(msg, mapKey) {
     }
 }
 
-const vosk = require('vosk');
 let recs = {}
 if (SPEECH_METHOD === 'vosk') {
   vosk.setLogLevel(-1);
@@ -300,46 +306,44 @@ if (SPEECH_METHOD === 'vosk') {
   // dev reference: https://github.com/alphacep/vosk-api/blob/master/nodejs/index.js
 }
 
-
 function speak_impl(voice_Connection, mapKey) {
-    voice_Connection.on('speaking', async (user, speaking) => {
-        if (speaking.bitfield == 0 || user.bot) {
-            return
+  const receiver = voice_Connection.receiver;
+  receiver.speaking.on('start', async (userId) => { 
+    const user = discordClient.users.cache.get(userId)
+    const audioStream = receiver.subscribe(userId, {
+      end: {
+        behavior: EndBehaviorType.AfterSilence,
+        duration: 1000,
+      },
+    });
+
+    const encoder = new OpusEncoder(48000, 2);
+    let buffer  = []; 
+    audioStream.on("data", chunk => { buffer.push( encoder.decode( chunk ) ) }); 
+    audioStream.once("end", async () => { 
+      
+      buffer = Buffer.concat(buffer)
+      const duration = buffer.length / 48000 / 4;
+      console.log("duration: " + duration)
+      
+      if (SPEECH_METHOD === 'witai' || SPEECH_METHOD === 'google') {
+        if (duration < 1.0 || duration > 19) { // 20 seconds max dur
+            console.log("TOO SHORT / TOO LONG; SKPPING")
+            return;
         }
-        console.log(`I'm listening to ${user.username}`)
-        // this creates a 16-bit signed PCM, stereo 48KHz stream
-        const audioStream = voice_Connection.receiver.createStream(user, { mode: 'pcm' })
-        audioStream.on('error',  (e) => { 
-            console.log('audioStream: ' + e)
-        });
-        let buffer = [];
-        audioStream.on('data', (data) => {
-            buffer.push(data)
-        })
-        audioStream.on('end', async () => {
-            buffer = Buffer.concat(buffer)
-            const duration = buffer.length / 48000 / 4;
-            console.log("duration: " + duration)
+      }
 
-            if (SPEECH_METHOD === 'witai' || SPEECH_METHOD === 'google') {
-            if (duration < 1.0 || duration > 19) { // 20 seconds max dur
-                console.log("TOO SHORT / TOO LONG; SKPPING")
-                return;
-            }
-            }
+      try {
+        let new_buffer = await convert_audio(buffer)
+        let out = await transcribe(new_buffer, mapKey);
+        if (out != null)
+            process_commands_query(out, mapKey, user);
+      } catch (e) {
+          console.log('tmpraw rename: ' + e)
+      }
+    }); 
 
-            try {
-                let new_buffer = await convert_audio(buffer)
-                let out = await transcribe(new_buffer, mapKey);
-                if (out != null)
-                    process_commands_query(out, mapKey, user);
-            } catch (e) {
-                console.log('tmpraw rename: ' + e)
-            }
-
-
-        })
-    })
+  });
 }
 
 function process_commands_query(txt, mapKey, user) {
@@ -369,7 +373,6 @@ async function transcribe(buffer, mapKey) {
 
 // WitAI
 let witAI_lastcallTS = null;
-const witClient = require('node-witai-speech');
 async function transcribe_witai(buffer) {
     try {
         // ensure we do not send more than one request per second
@@ -404,7 +407,6 @@ async function transcribe_witai(buffer) {
 
 // Google Speech API
 // https://cloud.google.com/docs/authentication/production
-const gspeech = require('@google-cloud/speech');
 const gspeechclient = new gspeech.SpeechClient({
   projectId: 'discordbot',
   keyFilename: 'gspeech_key.json'

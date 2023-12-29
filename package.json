@@ -21,13 +21,15 @@
   "homepage": "https://github.com/healzer/DiscordEarsBot#readme",
   "license": "ISC",
   "dependencies": {
-    "@discordjs/opus": "^0.4.0",
-    "@google-cloud/speech": "^4.2.0",
-    "@mapbox/node-pre-gyp": "^1.0.1",
-    "discord.js": "^12.5.3",
+    "@discordjs/node-pre-gyp": "^0.4.5",
+    "@discordjs/opus": "^0.9.0",
+    "@discordjs/voice": "^0.16.1",
+    "@google-cloud/speech": "^6.1.0",
+    "discord.js": "^14.14.1",
     "node-witai-speech": "^1.0.2",
+    "opusscript": "^0.0.8",
     "request": "^2.88.2",
-    "underscore": "^1.12.0",
-    "vosk": "^0.3.30"
+    "underscore": "^1.13.6",
+    "vosk": "^0.3.39"
   }
 }
