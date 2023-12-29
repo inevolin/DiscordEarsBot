@@ -14,6 +14,25 @@ Try the bot for yourself on our Discord server: https://discord.gg/ApdTMG9
 
 ## Developers
 
+### Setup
+
+In your Discord Developers Bot settings, you need to enable these intents:
+
+![image](https://github.com/inevolin/DiscordEarsBot/assets/53948000/6e926a75-a709-435a-b4f8-e9f8f0226856)
+
+
+### Manual Installation
+You need nodeJS version +16 with npm on your machine, use `node -v` to check your version.
+Execute the following commands:
+```
+git clone https://github.com/healzer/DiscordEarsBot.git
+cd DiscordEarsBot
+npm install
+```
+Provide the Discord API Token using `DISCORD_TOK` Env Variable or in `settings.json`.
+
+Finally run `node index.js`. You can also use pm2 or nodemon to keep the bot running 24/7.
+
 ### Heroku
 If you don't have a linux server/machine then you can use Heroku for hosting your bot 24/7 and it's free.
 1. Fork this GitHub repository
@@ -21,18 +40,6 @@ If you don't have a linux server/machine then you can use Heroku for hosting you
 3. Create new Heroku app, use the GitHub method and Deploy DiscordEarsBot
 5. Under "resources" disable "web" and enable "worker" dyno instead.
 6. Provide the DISCORD_TOK Config Var under "settings"
-
-### Manual Installation
-You need nodeJS version 12.x or 14.x with npm on your machine, use `node -v` to check your version.
-Execute the following commands:
-```
-git clone https://github.com/healzer/DiscordEarsBot.git
-cd DiscordEarsBot
-npm install
-```
-Proivde the Discord API Token using `DISCORD_TOK` Env Variable or in `settings.json`.
-
-Finally run `node index.js`. You can also use pm2 or nodemon to keep the bot running 24/7.
 
 ## Usage
 
