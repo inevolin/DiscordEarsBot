@@ -397,11 +397,22 @@ async function transcribe_witai(buffer) {
         witAI_lastcallTS = Math.floor(new Date());
         console.log(output)
         stream.destroy()
-        if (output && '_text' in output && output._text.length)
-            return output._text
-        if (output && 'text' in output && output.text.length)
-            return output.text
-        return output;
+        let cleanOutput = output.replace(/\r/g, ",").replace(/\n/g, "");
+        cleanOutput = `[${cleanOutput}]`;
+        const finalValidOutput = JSON.parse(cleanOutput);
+        if (finalValidOutput){
+          for (const obj of finalValidOutput) {
+            if (obj && obj.type === "FINAL_TRANSCRIPTION") {
+              if (Object.prototype.hasOwnProperty(obj, "_text") && obj._text.length) {
+                return obj._text;
+              }
+              if (obj.hasOwnProperty("text") && obj.text.length) {
+                return obj.text;
+              }
+            }
+          }
+        }
+        return null;
     } catch (e) { console.log('transcribe_witai 851:' + e); console.log(e) }
 }
 
