@@ -29,6 +29,8 @@ git clone https://github.com/healzer/DiscordEarsBot.git
 cd DiscordEarsBot
 npm install
 ```
+For the default local speech recognition, also install the Python worker (see [Whisper](#whisper-local-default) below).
+
 Provide the Discord API Token using `DISCORD_TOK` Env Variable or in `settings.json`.
 
 Finally run `node index.js`. You can also use pm2 or nodemon to keep the bot running 24/7.
@@ -65,8 +67,20 @@ By now you have a discord server, the DiscordEarsBot is running and is a part of
 
 YouTube comparison and tutorial for developers on choosing the right Speech API: https://www.youtube.com/watch?v=fQcEZIgw_LA
 
-### Vosk API
-This is our default Speech-to-Text method. The Vosk API is a free & open-source solution that runs locally (offline). By default only `english` is enabled. Developers can change or include more language models from here: https://alphacephei.com/vosk/models
+### Whisper (local, default)
+This is our default Speech-to-Text method (`SPEECH_METHOD` `whisper`). It runs [faster-whisper](https://github.com/SYSTRAN/faster-whisper) locally on the CPU in a persistent Python worker (`whisper_worker.py`) that `index.js` starts once. The `base` model uses roughly 200–400 MB RAM; set the `WHISPER_MODEL` env variable (e.g. `small`) for better accuracy at higher RAM/latency cost. The model downloads on first start (to `~/.cache/huggingface`).
+
+Python 3.9+ is required. Install into a venv inside the bot folder (it is picked up automatically):
+```
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+On Debian 12 you may first need `sudo apt install python3-venv`. To use the system Python instead, run `pip install --break-system-packages -r requirements.txt`, or point `WHISPER_PYTHON` at any interpreter.
+
+Switch the language with `*lang <code>` (ISO 639-1, e.g. `*lang de`). The default is `en`.
+
+### Vosk API (local)
+Set `SPEECH_METHOD` to `vosk` to use the Vosk API instead: free & open-source, runs locally (offline) inside Node, no Python needed, but less accurate than Whisper. By default only `english` is enabled (`vosk_models/en`). Developers can change or include more language models from here: https://alphacephei.com/vosk/models — add them to `recs` in `index.js`, then `*lang <code>` switches between them.
 
 ### WitAI
 Installation:

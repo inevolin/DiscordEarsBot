@@ -17,9 +17,10 @@ const util = require('util');
 const { Readable } = require('stream');
 const { OpusEncoder } = require('@discordjs/opus');
 const https = require('https')
-const { Client, IntentsBitField } = require('discord.js')
+const { Client, IntentsBitField, PermissionsBitField } = require('discord.js')
 const { joinVoiceChannel, EndBehaviorType } = require('@discordjs/voice');
-const vosk = require('vosk');
+const { spawn } = require('child_process');
+const readline = require('readline');
 const witClient = require('node-witai-speech');
 const gspeech = require('@google-cloud/speech');
 
@@ -42,10 +43,17 @@ function sleep(ms) {
 
 async function convert_audio(input) {
     try {
-        // stereo to mono channel
-        const data = new Int16Array(input)
-        const ndata = data.filter((el, idx) => idx % 2);
-        return Buffer.from(ndata);
+        // 48kHz 16-bit stereo -> 16kHz 16-bit mono: average L+R over each group of 3 frames (12 bytes);
+        // the 3-frame box average doubles as a cheap anti-aliasing filter for the 3x decimation
+        const frames = Math.floor(input.length / 12);
+        const ndata = Buffer.alloc(frames * 2);
+        for (let i = 0; i < frames; i++) {
+            let sum = 0;
+            for (let b = i * 12; b < i * 12 + 12; b += 2)
+                sum += input.readInt16LE(b);
+            ndata.writeInt16LE(Math.round(sum / 6), i * 2);
+        }
+        return ndata;
     } catch (e) {
         console.log(e)
         console.log('convert_audio: ' + e)
@@ -65,7 +73,7 @@ const SETTINGS_FILE = 'settings.json';
 
 let DISCORD_TOK = null;
 let WITAI_TOK = null; 
-let SPEECH_METHOD = 'vosk'; // witai, google, vosk
+let SPEECH_METHOD = 'whisper'; // witai, google, vosk, whisper
 
 function loadConfig() {
     if (fs.existsSync(SETTINGS_FILE)) {
@@ -78,7 +86,7 @@ function loadConfig() {
     WITAI_TOK = process.env.WITAI_TOK || WITAI_TOK;
     SPEECH_METHOD = process.env.SPEECH_METHOD || SPEECH_METHOD;
 
-    if (!['witai', 'google', 'vosk'].includes(SPEECH_METHOD))
+    if (!['witai', 'google', 'vosk', 'whisper'].includes(SPEECH_METHOD))
         throw 'invalid or missing SPEECH_METHOD'
     if (!DISCORD_TOK)
         throw 'invalid or missing DISCORD_TOK'
@@ -179,6 +187,7 @@ const _CMD_LEAVE       = PREFIX + 'leave';
 const _CMD_DEBUG       = PREFIX + 'debug';
 const _CMD_TEST        = PREFIX + 'hello';
 const _CMD_LANG        = PREFIX + 'lang';
+const _CMD_STATUS      = PREFIX + 'status';
 
 const guildMap = new Map();
 
@@ -188,7 +197,7 @@ discordClient.on('messageCreate', async (msg) => {
         if (!('guild' in msg) || !msg.guild) return; // prevent private messages to bot
         const mapKey = msg.guild.id;
         if (msg.content.trim().toLowerCase() == _CMD_JOIN) {
-            if (!msg.member.voice.channel.id) {
+            if (!msg.member.voice.channel?.id) {
                 msg.reply('Error: please join a voice channel first.')
             } else {
                 if (!guildMap.has(mapKey))
@@ -199,8 +208,7 @@ discordClient.on('messageCreate', async (msg) => {
         } else if (msg.content.trim().toLowerCase() == _CMD_LEAVE) {
             if (guildMap.has(mapKey)) {
                 let val = guildMap.get(mapKey);
-                if (val.voice_Channel) val.voice_Channel.leave()
-                if (val.voice_Connection) val.voice_Connection.disconnect()
+                if (val.voice_Connection) val.voice_Connection.destroy();
                 guildMap.delete(mapKey)
                 msg.reply("Disconnected.")
             } else {
@@ -220,6 +228,12 @@ discordClient.on('messageCreate', async (msg) => {
         else if (msg.content.trim().toLowerCase() == _CMD_TEST) {
             msg.reply('hello back =)')
         }
+        else if (msg.content.trim().toLowerCase() == _CMD_STATUS) {
+            if (!msg.member?.permissions.has(PermissionsBitField.Flags.Administrator))
+                msg.reply('Error: only server administrators can use this command.')
+            else
+                msg.reply(await get_status(mapKey))
+        }
         else if (msg.content.split('\n')[0].split(' ')[0].trim().toLowerCase() == _CMD_LANG) {
             if (SPEECH_METHOD === 'witai') {
               const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
@@ -235,7 +249,7 @@ discordClient.on('messageCreate', async (msg) => {
                   })
                 }
               })
-            } else if (SPEECH_METHOD === 'vosk') {
+            } else if (SPEECH_METHOD === 'vosk' || SPEECH_METHOD === 'whisper') {
               let val = guildMap.get(mapKey);
               const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
               val.selected_lang = lang;
@@ -255,6 +269,7 @@ function getHelpString() {
         out += PREFIX + 'join\n';
         out += PREFIX + 'leave\n';
         out += PREFIX + 'lang <code>\n';
+        out += PREFIX + 'status\n';
         out += '```'
     return out;
 }
@@ -295,31 +310,122 @@ async function connect(msg, mapKey) {
 
 let recs = {}
 if (SPEECH_METHOD === 'vosk') {
+  const vosk = require('vosk'); // loaded only when chosen, so whisper setups skip the native ffi bindings
   vosk.setLogLevel(-1);
   // MODELS: https://alphacephei.com/vosk/models
   recs = {
-    'en': new vosk.Recognizer({model: new vosk.Model('vosk_models/en'), sampleRate: 48000}),
-    // 'fr': new vosk.Recognizer({model: new vosk.Model('vosk_models/fr'), sampleRate: 48000}),
-    // 'es': new vosk.Recognizer({model: new vosk.Model('vosk_models/es'), sampleRate: 48000}),
+    'en': new vosk.Recognizer({model: new vosk.Model('vosk_models/en'), sampleRate: 16000}),
+    // 'fr': new vosk.Recognizer({model: new vosk.Model('vosk_models/fr'), sampleRate: 16000}),
+    // 'es': new vosk.Recognizer({model: new vosk.Model('vosk_models/es'), sampleRate: 16000}),
   }
   // download new models if you need
   // dev reference: https://github.com/alphacep/vosk-api/blob/master/nodejs/index.js
 }
 
+// faster-whisper runs in one long-lived Python process so the model stays warm and Node never blocks
+let whisper = null;
+let whisper_next_id = 0;
+let whisper_started_at = null;
+let whisper_restarts = 0;
+const whisper_pending = new Map();
+function start_whisper() {
+  const python = process.env.WHISPER_PYTHON || (fs.existsSync('.venv/bin/python') ? '.venv/bin/python' : 'python3');
+  whisper = spawn(python, ['whisper_worker.py'], { stdio: ['pipe', 'pipe', 'inherit'] });
+  whisper_started_at = Date.now();
+  whisper.on('error', e => console.log('whisper worker: ' + e));
+  whisper.stdin.on('error', e => console.log('whisper stdin: ' + e));
+  readline.createInterface({ input: whisper.stdout }).on('line', line => {
+    let res;
+    try { res = JSON.parse(line) } catch (e) { return console.log('whisper: ' + line) }
+    const resolve = whisper_pending.get(res.id);
+    whisper_pending.delete(res.id);
+    if (resolve) resolve(res);
+  });
+  whisper.on('exit', code => {
+    console.log('whisper worker exited (' + code + '), restarting in 5s');
+    for (const resolve of whisper_pending.values()) resolve({ error: 'worker exited' });
+    whisper_pending.clear();
+    whisper_restarts++;
+    setTimeout(start_whisper, 5000);
+  });
+}
+if (SPEECH_METHOD === 'whisper') start_whisper();
+
+function whisper_request(header, buffer = Buffer.alloc(0)) {
+  return new Promise(resolve => {
+    const id = whisper_next_id++;
+    whisper_pending.set(id, resolve);
+    whisper.stdin.write(JSON.stringify({ id, ...header, bytes: buffer.length }) + '\n');
+    whisper.stdin.write(buffer);
+  });
+}
+
+async function transcribe_whisper(buffer, lang) {
+  if (!whisper.stdin.writable) return null;
+  const res = await whisper_request({ lang }, buffer);
+  if (res.error) {
+    console.log('whisper error: ' + res.error);
+    return null;
+  }
+  console.log('whisper:', res.text);
+  return res.text;
+}
+
+async function get_status(mapKey) {
+  const val = guildMap.get(mapKey);
+  const lang = val ? val.selected_lang : 'en';
+  let out = '**Speech method:** ' + SPEECH_METHOD + '\n';
+  out += '**Language:** ' + lang + (val ? '' : ' (not connected)') + '\n';
+  out += '**Bot RAM:** ' + Math.round(process.memoryUsage().rss / 1048576) + ' MB\n';
+  if (SPEECH_METHOD === 'whisper') {
+    const up = whisper.exitCode === null && whisper.stdin.writable;
+    out += '**Worker:** ' + (up ? 'running' : 'NOT running (check pm2 logs)') + ', pid ' + whisper.pid
+      + ', up ' + Math.round((Date.now() - whisper_started_at) / 60000) + ' min, restarts ' + whisper_restarts
+      + ', queued clips ' + whisper_pending.size + '\n';
+    if (!up) return out;
+    const sent = Date.now();
+    // waits behind queued clips, so the timing reflects real load; first start may still be loading the model
+    const res = await Promise.race([
+      whisper_request({ status: true }),
+      sleep(20000).then(() => ({ error: 'no reply in 20 s (model still loading, or worker stuck)' })),
+    ]);
+    if (res.error) return out + '**Self-test:** FAILED: ' + res.error;
+    out += '**Model:** ' + res.model + ' (' + res.compute_type + ', ' + res.cpu_threads + ' threads)'
+      + (res.peak_rss_mb ? ', worker peak RAM ' + res.peak_rss_mb + ' MB' : '') + '\n';
+    out += '**Self-test:** OK, 1 s test clip decoded in ' + res.infer_ms + ' ms (round trip ' + (Date.now() - sent) + ' ms)';
+  } else if (SPEECH_METHOD === 'vosk') {
+    let model = 'unknown';
+    try { model = fs.readFileSync('vosk_models/en/README', 'utf8').split('\n')[0].trim() } catch (e) {}
+    out += '**Model:** ' + model + ' (loaded: ' + Object.keys(recs).join(', ') + ')\n';
+    if (!recs[lang]) return out + '**Self-test:** FAILED: no Vosk model loaded for "' + lang + '"';
+    const sent = Date.now();
+    recs[lang].acceptWaveform(Buffer.alloc(32000)); // 1 s of 16 kHz silence
+    recs[lang].finalResult();
+    out += '**Self-test:** OK, 1 s test clip decoded in ' + (Date.now() - sent) + ' ms';
+  }
+  return out;
+}
+
 function speak_impl(voice_Connection, mapKey) {
   const receiver = voice_Connection.receiver;
-  receiver.speaking.on('start', async (userId) => { 
-    const user = discordClient.users.cache.get(userId)
+  receiver.speaking.on('start', async (userId) => {
+    if (receiver.subscriptions.has(userId)) return; // already recording this user
     const audioStream = receiver.subscribe(userId, {
       end: {
         behavior: EndBehaviorType.AfterSilence,
-        duration: 1000,
+        duration: 600,
       },
     });
 
     const encoder = new OpusEncoder(48000, 2);
-    let buffer  = []; 
-    audioStream.on("data", chunk => { buffer.push( encoder.decode( chunk ) ) }); 
+    let buffer  = [];
+    audioStream.on("data", chunk => {
+      try {
+        buffer.push( encoder.decode( chunk ) )
+      } catch (e) {
+        console.log('opus decode: ' + e) // drop the corrupt packet, keep the utterance
+      }
+    });
     audioStream.once("end", async () => { 
       
       buffer = Buffer.concat(buffer)
@@ -337,9 +443,9 @@ function speak_impl(voice_Connection, mapKey) {
         let new_buffer = await convert_audio(buffer)
         let out = await transcribe(new_buffer, mapKey);
         if (out != null)
-            process_commands_query(out, mapKey, user);
+            process_commands_query(out, mapKey, await discordClient.users.fetch(userId));
       } catch (e) {
-          console.log('tmpraw rename: ' + e)
+          console.log('transcribe: ' + e)
       }
     }); 
 
@@ -365,9 +471,13 @@ async function transcribe(buffer, mapKey) {
   } else if (SPEECH_METHOD === 'vosk') {
       let val = guildMap.get(mapKey);
       recs[val.selected_lang].acceptWaveform(buffer);
-      let ret = recs[val.selected_lang].result().text;
+      // finalResult() flushes and resets the recognizer, so trailing words don't bleed into the next utterance
+      let ret = recs[val.selected_lang].finalResult().text;
       console.log('vosk:', ret)
       return ret;
+  } else if (SPEECH_METHOD === 'whisper') {
+      let val = guildMap.get(mapKey);
+      return transcribe_whisper(buffer, val.selected_lang)
   }
 }
 
@@ -392,7 +502,7 @@ async function transcribe_witai(buffer) {
         console.log('transcribe_witai')
         const extractSpeechIntent = util.promisify(witClient.extractSpeechIntent);
         var stream = Readable.from(buffer);
-        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=48k;endian=little"
+        const contenttype = "audio/raw;encoding=signed-integer;bits=16;rate=16k;endian=little"
         const output = await extractSpeechIntent(WITAI_TOK, stream, contenttype)
         witAI_lastcallTS = Math.floor(new Date());
         console.log(output)
@@ -421,7 +531,7 @@ async function transcribe_gspeech(buffer) {
       };
       const config = {
         encoding: 'LINEAR16',
-        sampleRateHertz: 48000,
+        sampleRateHertz: 16000,
         languageCode: 'en-US',  // https://cloud.google.com/speech-to-text/docs/languages
       };
       const request = {

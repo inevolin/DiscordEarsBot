@@ -6,7 +6,7 @@ module.exports = {
     autorestart: true,
     log_date_format: 'HH:mm:ss',
     watch: true,
-    ignore_watch : [".git", "temp", "data", "node_modules"],
+    ignore_watch : [".git", "temp", "data", "node_modules", ".venv"],
     max_memory_restart: '2G',
   }]
 };
